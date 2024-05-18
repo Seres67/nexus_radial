@@ -7,20 +7,20 @@ AddonDefinition AddonDef{};
 extern "C" __declspec(dllexport) AddonDefinition *GetAddonDef()
 {
     //TODO: Change signature (!!!), name, desc, author, desc
-    AddonDef.Signature = -918434798;
+    AddonDef.Signature = -918434272;
     AddonDef.APIVersion = NEXUS_API_VERSION;
-    AddonDef.Name = "Meson/Ninja Template";
+    AddonDef.Name = "Radial";
     AddonDef.Version.Major = 0;
     AddonDef.Version.Minor = 1;
     AddonDef.Version.Build = 0;
     AddonDef.Version.Revision = 0;
-    AddonDef.Author = "Author";
+    AddonDef.Author = "Seres67";
     AddonDef.Description = "Template using meson and ninja to build";
     AddonDef.Load = Addon::load;
     AddonDef.Unload = Addon::unload;
     AddonDef.Flags = EAddonFlags_None;
-    AddonDef.Provider = EUpdateProvider_None;
-    AddonDef.UpdateLink = nullptr;
+    AddonDef.Provider = EUpdateProvider_GitHub;
+    AddonDef.UpdateLink = "https://github.com/Seres67/nexus_radial";
 
     return &AddonDef;
 }

@@ -5,22 +5,17 @@
 #include "nexus/Nexus.h"
 #include "Shared.hpp"
 
-class Addon {
-public:
-    static void load(AddonAPI *aApi);
+namespace Addon {
+    void load(AddonAPI *aApi);
 
-    static void unload();
+    void unload();
 
-    static void render();
+    void render();
 
-    static void render_options();
+    void render_options();
 
-private:
-    static std::filesystem::path AddonPath;
-    static std::filesystem::path SettingsPath;
-    //TODO: change name
-    static constexpr std::string_view m_addon_name = "template";
-};
+    unsigned int wndproc(HWND hWnd, unsigned int uMsg, WPARAM wParam, LPARAM lParam);
+}
 
 
 #endif //NEXUS_TEMPLATE_ADDON_HPP

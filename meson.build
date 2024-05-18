@@ -1,4 +1,4 @@
-project('nexus_template', 'cpp',
+project('nexus_radial', 'cpp',
         version : '1.0.0',
         default_options : ['warning_level=3', 'cpp_std=c++20'])
 
@@ -11,4 +11,4 @@ imgui_sources = files('src/imgui/imgui.cpp', 'src/imgui/imgui_draw.cpp', 'src/im
 imgui_lib = static_library('imgui', imgui_sources, include_directories: imgui_include_dirs)
 imgui_dep = declare_dependency(link_with: imgui_lib, include_directories: imgui_include_dirs)
 
-nexus_template = library('nexus_template', sources, include_directories : include_dir, dependencies: [imgui_dep])
+nexus_radial = library('nexus_radial', sources, include_directories : include_dir, dependencies: [imgui_dep], install: true, install_dir: 'E:/Guild Wars 2/addons')
