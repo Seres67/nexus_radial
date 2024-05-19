@@ -6,12 +6,12 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 
-Wheel::Wheel(const char *name) : m_name(_strdup(name)) {
+Wheel::Wheel(const char *name, Key key) : m_name(_strdup(name)), m_key(key) {
 
 }
 
-void Wheel::add_element(const std::string &name) {
-    m_elements.emplace_back(name);
+void Wheel::add_element(mts_action action) {
+    m_elements.emplace_back(action);
 }
 
 void Wheel::open_wheel() {
@@ -43,10 +43,10 @@ bool Wheel::render_wheel() {
         ImDrawList *draw_list = ImGui::GetWindowDrawList();
         draw_list->PushClipRectFullScreen();
         // um, the circumference of a circle is 2*PI*R, wtf imgui? PI*2 only works if center.x is greater than some unknown value
-        draw_list->PathArcTo(center, (RADIUS_MIN + RADIUS_MAX) * 0.5f, 0.0f, IM_PI * 2.3f, 18);
+        draw_list->PathArcTo(center, (RADIUS_MIN + RADIUS_MAX) * 0.5f, 0.0f, IM_PI * 2.3f, 64);
         draw_list->PathStroke(IM_COL32(0, 0, 0, 255), true, RADIUS_MAX - RADIUS_MIN);
 
-        const float item_arc_span = 2 * IM_PI / m_elements.size();
+        const float item_arc_span = 2 * IM_PI / ImMax((int) m_elements.size(), 6);
         float drag_angle = ImAtan2(drag_delta.y, drag_delta.x);
         if (drag_angle < -0.5f * item_arc_span)
             drag_angle += 2.0f * IM_PI;
@@ -55,7 +55,7 @@ bool Wheel::render_wheel() {
         // Draw items
         m_hovered_id = -1;
         for (int item_id = 0; item_id < m_elements.size(); ++item_id) {
-            std::string item_label = m_elements[item_id];
+            std::string item_label = m_elements[item_id].action_name;
             const float item_ang_min = item_arc_span * (item_id + 0.02f) -
                                        item_arc_span * 0.5f; // FIXME: Could calculate padding angle based on how many pixels they'll take
             const float item_ang_max = item_arc_span * (item_id + 0.98f) - item_arc_span * 0.5f;
@@ -88,6 +88,16 @@ const char *Wheel::get_wheel_name() const {
     return m_name;
 }
 
-std::vector<std::string> Wheel::get_elements() {
+std::vector<mts_action> Wheel::get_elements() {
     return m_elements;
+}
+
+mts_action Wheel::get_hovered_element() const {
+    if (m_hovered_id != -1)
+        return m_elements[m_hovered_id];
+    return {};
+}
+
+Key Wheel::get_key() const {
+    return m_key;
 }

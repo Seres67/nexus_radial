@@ -7,27 +7,33 @@
 
 #include <string>
 #include <vector>
+#include "Action.hpp"
 
 class Wheel {
 public:
-    Wheel(const char *name);
+    Wheel(const char *name, Key key);
 
-    void add_element(const std::string &name);
+    void add_element(mts_action name);
 
     void open_wheel();
     void close_wheel();
 
     bool is_open() const;
 
+    mts_action get_hovered_element() const;
+
     bool render_wheel();
 
     const char *get_wheel_name() const;
 
-    std::vector<std::string> get_elements();
+    std::vector<mts_action> get_elements();
+
+    Key get_key() const;
 
 private:
     const char *m_name;
-    std::vector<std::string> m_elements;
+    Key m_key;
+    std::vector<mts_action> m_elements;
     bool m_wheel_open = false;
     int m_hovered_id = -1;
 };

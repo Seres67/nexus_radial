@@ -9,7 +9,15 @@
 class Key {
 public:
     explicit Key(char key, bool alt = false, bool ctrl = false, bool shift = false);
-    void press(HWND hwnd);
+    void press(HWND hwnd) const;
+
+    char get_key_code() const;
+
+    bool alt() const;
+
+    bool ctrl() const;
+
+    bool shift() const;
 
 private:
     char m_key;
