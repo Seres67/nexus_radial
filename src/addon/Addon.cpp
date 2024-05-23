@@ -16,8 +16,9 @@ namespace Addon {
     HWND m_window = nullptr;
     char wheel_name[20]{0};
     char element_name[20]{0};
+    char command[20]{0};
     std::vector<Wheel> wheels;
-    Wheel *wheel_to_add_element_to;
+    int wheel_to_add_element_to = -1;
     bool m_waiting_for_wheel_keybinding = false;
     bool m_control_down = false;
     bool m_alt_down = false;
@@ -42,6 +43,7 @@ namespace Addon {
         m_addon_path = APIDefs->GetAddonDirectory("radial");
         m_settings_path = APIDefs->GetAddonDirectory("radial/settings.json");
         std::filesystem::create_directory(m_addon_path);
+//        Settings::Load(m_addon_path);
         m_button_pressed = false;
     }
 
@@ -52,10 +54,15 @@ namespace Addon {
 
         MumbleLink = nullptr;
         NexusLink = nullptr;
+        for (auto &wheel: wheels) {
+            nlohmann::json a = wheel;
+            Settings::m_json_settings[Settings::WHEELS].emplace_back(a);
+        }
+        Settings::Save(m_addon_path);
     }
 
-    void execute_keybinding(mts_action ele) {
-        std::thread([ele]() {
+    void execute_keybinding(const char *str, std::size_t len) {
+        std::thread([str, len]() {
             using namespace std::chrono_literals;
             Key enter{VK_RETURN};
             if (m_control_down)
@@ -66,8 +73,8 @@ namespace Addon {
                 PostMessage(m_window, WM_KEYUP, VK_LSHIFT, Utils::GetLParam(VK_LSHIFT, false));
             enter.press(m_window);
             std::this_thread::sleep_for(20ms);
-            for (int i = 0; i < strlen(ele.clipboard); ++i)
-                PostMessage(m_window, WM_CHAR, (WPARAM) ele.clipboard[i], 0);
+            for (std::size_t i = 0; i < len; ++i)
+                PostMessage(m_window, WM_CHAR, (WPARAM) str[i], 0);
             enter.press(m_window);
             if (m_control_down)
                 PostMessage(m_window, WM_KEYDOWN, VK_LCONTROL, Utils::GetLParam(VK_LCONTROL, true));
@@ -86,13 +93,15 @@ namespace Addon {
             if (wheel.render_wheel()) {
                 if (!m_button_pressed && wheel.is_open()) {
                     wheel.close_wheel();
-                    auto ele = wheel.get_hovered_element();
-                    if (ele.action_name) {
-                        Log::debug(ele.clipboard);
-                        if (ele.type)
-                            execute_keybinding(ele);
-                        else
-                            ele.key.press(m_window);
+                    std::shared_ptr<Action> ele = wheel.get_hovered_element();
+                    if (ele == nullptr)
+                        continue;
+                    if (std::holds_alternative<Key>(ele->m_action)) {
+                        Key key = std::get<Key>(ele->m_action);
+                        key.press(m_window);
+                    } else if (std::holds_alternative<std::string>(ele->m_action)) {
+                        std::string str = std::get<std::string>(ele->m_action);
+                        execute_keybinding(_strdup(str.c_str()), str.length());
                     }
                 }
                 ImGui::EndPopup();
@@ -119,12 +128,14 @@ namespace Addon {
                     char c = MapVirtualKeyA(m_key.get_key_code(), MAPVK_VK_TO_CHAR);
                     str += c;
                     ImGui::Text("%s", str.c_str());
-                    if (ImGui::Button("Wheel keybinding")) {
+                    if (ImGui::Button("Press to bind a key")) {
                         m_key = Key{0};
                         m_waiting_for_wheel_keybinding = true;
                     }
+                } else if (m_waiting_for_wheel_keybinding) {
+                    ImGui::Text("Waiting for keys");
                 } else {
-                    if (ImGui::Button("Wheel keybinding")) {
+                    if (ImGui::Button("Press to bind a key")) {
                         m_waiting_for_wheel_keybinding = true;
                     }
                 }
@@ -156,21 +167,22 @@ namespace Addon {
                 char c = MapVirtualKeyA(m_key.get_key_code(), MAPVK_VK_TO_CHAR);
                 str += c;
                 ImGui::Text("%s", str.c_str());
-                if (ImGui::Button("Keybinding")) {
+                if (ImGui::Button("Press to bind a key")) {
                     m_key = Key{0};
                     m_waiting_for_wheel_keybinding = true;
                 }
+            } else if (m_waiting_for_wheel_keybinding) {
+                ImGui::Text("Waiting for keys");
             } else {
-                if (ImGui::Button("Keybinding")) {
+                if (ImGui::Button("Press to bind a key")) {
                     m_waiting_for_wheel_keybinding = true;
                 }
             }
             if (ImGui::Button("Confirm##confirm_element")) {
-                mts_action action = {.type = false, .action_name = _strdup(element_name), .key = m_key};
-                if (wheel_to_add_element_to)
-                    wheel_to_add_element_to->add_element(action);
+                if (wheel_to_add_element_to != -1)
+                    wheels[wheel_to_add_element_to].add_element(element_name, m_key);
                 m_key = Key{0};
-                wheel_to_add_element_to = nullptr;
+                wheel_to_add_element_to = -1;
                 memset(element_name, 0, 20);
                 ImGui::CloseCurrentPopup();
                 m_popup_open = false;
@@ -178,39 +190,39 @@ namespace Addon {
             ImGui::EndPopup();
         }
         if (ImGui::BeginPopupModal("Add wheel clipboard##element_modal")) {
-            ImGui::Text("Command name");
-            ImGui::InputText("", element_name, 20);
+            ImGui::InputText("Name##element_name", element_name, 20);
+            ImGui::InputText("Command to type in chat##command", command, 20);
             if (ImGui::Button("Confirm##confirm_element")) {
-                mts_action clipboard = {.type = true, .action_name = _strdup(element_name), .clipboard = _strdup(element_name)};
-                if (wheel_to_add_element_to)
-                    wheel_to_add_element_to->add_element(clipboard);
-                wheel_to_add_element_to = nullptr;
-                memset(element_name, 0, 20);
+                if (wheel_to_add_element_to != -1)
+                    wheels[wheel_to_add_element_to].add_element(element_name, command);
                 ImGui::CloseCurrentPopup();
                 m_popup_open = false;
+                memset(element_name, 0, 20);
+                memset(command, 0, 20);
+                wheel_to_add_element_to = -1;
             }
             ImGui::EndPopup();
         }
-        for (auto &wheel: wheels) {
+        for (int i = 0; i < wheels.size(); ++i) {
             ImGui::NewLine();
-            ImGui::Text("%s", wheel.get_wheel_name());
-            if (ImGui::Button((std::string("Add keybinding##") + wheel.get_wheel_name() + "_add_keybinding").c_str())) {
+            ImGui::Text("%s", wheels[i].get_wheel_name().c_str());
+            if (ImGui::Button((std::string("Add keybinding##") + wheels[i].get_wheel_name() + "_add_keybinding").c_str())) {
                 ImGui::OpenPopup("Add wheel keybinding##element_modal");
-                wheel_to_add_element_to = &wheel;
+                wheel_to_add_element_to = i;
                 m_popup_open = true;
             }
             ImGui::SameLine();
-            if (ImGui::Button((std::string("Add clipboard##") + wheel.get_wheel_name() + "_add_clipboard").c_str())) {
+            if (ImGui::Button((std::string("Add clipboard##") + wheels[i].get_wheel_name() + "_add_clipboard").c_str())) {
                 ImGui::OpenPopup("Add wheel clipboard##element_modal");
-                wheel_to_add_element_to = &wheel;
+                wheel_to_add_element_to = i;
                 m_popup_open = true;
             }
             ImGui::SameLine();
             if (ImGui::Button("Set keybinding")) {
 
             }
-            for (auto &element: wheel.get_elements()) {
-                ImGui::Text("%s", element.action_name);
+            for (auto &element: wheels[i].get_elements()) {
+                ImGui::Text("%s", element.m_action_name.c_str());
                 ImGui::SameLine();
                 if (ImGui::Button("Add keybinding")) {
                     Settings::adding_keybinding = true;
@@ -221,6 +233,36 @@ namespace Addon {
                 }
             }
         }
+//        for (auto &wheel: wheels) {
+//            ImGui::NewLine();
+//            ImGui::Text("%s", wheel.get_wheel_name().c_str());
+//            if (ImGui::Button((std::string("Add keybinding##") + wheel.get_wheel_name() + "_add_keybinding").c_str())) {
+//                ImGui::OpenPopup("Add wheel keybinding##element_modal");
+//                wheel_to_add_element_to = &wheel;
+//                m_popup_open = true;
+//            }
+//            ImGui::SameLine();
+//            if (ImGui::Button((std::string("Add clipboard##") + wheel.get_wheel_name() + "_add_clipboard").c_str())) {
+//                ImGui::OpenPopup("Add wheel clipboard##element_modal");
+//                wheel_to_add_element_to = &wheel;
+//                m_popup_open = true;
+//            }
+//            ImGui::SameLine();
+//            if (ImGui::Button("Set keybinding")) {
+//
+//            }
+//            for (auto &element: wheel.get_elements()) {
+//                ImGui::Text("%s", element.action_name.c_str());
+//                ImGui::SameLine();
+//                if (ImGui::Button("Add keybinding")) {
+//                    Settings::adding_keybinding = true;
+//                }
+//                ImGui::SameLine();
+//                if (ImGui::Button("Delete element")) {
+//                    Settings::adding_keybinding = true;
+//                }
+//            }
+//        }
     }
 
     unsigned int wndproc(HWND hWnd, unsigned int uMsg, WPARAM wParam, LPARAM lParam) {

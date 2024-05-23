@@ -6,12 +6,18 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 
-Wheel::Wheel(const char *name, Key key) : m_name(_strdup(name)), m_key(key) {
+#include "memory"
 
+Wheel::Wheel(std::string name, Key key) : m_name(std::move(name)), m_key(key) {
+    m_elements.reserve(6);
 }
 
-void Wheel::add_element(mts_action action) {
-    m_elements.emplace_back(action);
+void Wheel::add_element(const std::string &name, const std::string &command) {
+    m_elements.emplace_back(name, command);
+}
+
+void Wheel::add_element(const std::string &name, Key key) {
+    m_elements.emplace_back(name, key);
 }
 
 void Wheel::open_wheel() {
@@ -55,7 +61,7 @@ bool Wheel::render_wheel() {
         // Draw items
         m_hovered_id = -1;
         for (int item_id = 0; item_id < m_elements.size(); ++item_id) {
-            std::string item_label = m_elements[item_id].action_name;
+            std::string item_label = m_elements[item_id].m_action_name;
             const float item_ang_min = item_arc_span * (item_id + 0.02f) -
                                        item_arc_span * 0.5f; // FIXME: Could calculate padding angle based on how many pixels they'll take
             const float item_ang_max = item_arc_span * (item_id + 0.98f) - item_arc_span * 0.5f;
@@ -84,20 +90,26 @@ bool Wheel::render_wheel() {
     return false;
 }
 
-const char *Wheel::get_wheel_name() const {
+const std::string &Wheel::get_wheel_name() const {
     return m_name;
 }
 
-std::vector<mts_action> Wheel::get_elements() {
+std::vector<Action> Wheel::get_elements() {
     return m_elements;
 }
 
-mts_action Wheel::get_hovered_element() const {
-    if (m_hovered_id != -1)
-        return m_elements[m_hovered_id];
-    return {};
+std::vector<Action> Wheel::get_elements() const {
+    return m_elements;
 }
 
-Key Wheel::get_key() const {
+std::shared_ptr<Action> Wheel::get_hovered_element() {
+    if (m_hovered_id != -1)
+        return std::make_shared<Action>(m_elements[m_hovered_id]);
+    return nullptr;
+}
+
+const Key &Wheel::get_key() const {
     return m_key;
 }
+
+void

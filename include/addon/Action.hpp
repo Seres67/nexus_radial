@@ -6,25 +6,39 @@
 #define NEXUS_RADIAL_ACTION_HPP
 
 #include <string>
+#include <utility>
+#include <variant>
 #include "addon/Key.hpp"
 
-//
-//typedef struct {
-//    std::string text;
-//} mts_clipboard;
-//
-//typedef struct {
-//    Key key;
-//} mts_keybinding;
+struct Action {
+    Action(const std::string &action_name, const std::string &command) : m_type(false), m_action_name(action_name), m_action(command) {
 
-typedef struct ms_action {
-    bool type;
-    char *action_name;
+    }
 
-    union {
-        char *clipboard;
-        Key key{0};
-    };
-} mts_action;
+    Action(const std::string &action_name, Key key) : m_type(true), m_action_name(action_name), m_action(key) {
+
+    }
+//
+//    Action(Action &action) {
+//        type = action.type;
+//        action_name = action.action_name;
+//        if (type)
+//            u.key = action.u.key;
+//        else
+//            u.clipboard = action.u.clipboard;
+//    }
+//
+//    Action(Action &&action) noexcept {
+//        m_type = action.m_type;
+//        m_action_name = action.m_action_name;
+//        m_action = action.m_action;
+//    }
+
+
+    bool m_type;
+    std::string m_action_name;
+    std::variant<Key, std::string> m_action;
+};
+
 
 #endif //NEXUS_RADIAL_ACTION_HPP

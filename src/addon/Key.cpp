@@ -42,3 +42,17 @@ bool Key::ctrl() const {
 bool Key::shift() const {
     return m_shift;
 }
+
+void Key::from_json(const nlohmann::json &json, Key &key) {
+    json["m_key"].get_to<char>(key.m_key);
+    json["m_alt"].get_to<bool>(key.m_alt);
+    json["m_ctrl"].get_to<bool>(key.m_ctrl);
+    json["m_shift"].get_to<bool>(key.m_shift);
+}
+
+void Key::to_json(nlohmann::json &json, const Key &key) {
+    json["m_key"] = key.m_key;
+    json["m_alt"] = key.m_alt;
+    json["m_ctrl"] = key.m_ctrl;
+    json["m_shift"] = key.m_shift;
+}

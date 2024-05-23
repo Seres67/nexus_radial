@@ -11,29 +11,37 @@
 
 class Wheel {
 public:
-    Wheel(const char *name, Key key);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Wheel, m_name, m_key, m_elements)
 
-    void add_element(mts_action name);
+    Wheel(std::string name, Key key);
+
+    void add_element(const std::string &name, const std::string &command);
+
+    void add_element(const std::string &name, Key key);
 
     void open_wheel();
     void close_wheel();
 
-    bool is_open() const;
+    [[nodiscard]] bool is_open() const;
 
-    mts_action get_hovered_element() const;
+    std::shared_ptr<Action> get_hovered_element();
 
     bool render_wheel();
 
-    const char *get_wheel_name() const;
+    [[nodiscard]] const std::string &get_wheel_name() const;
 
-    std::vector<mts_action> get_elements();
+    std::vector<Action> get_elements();
 
-    Key get_key() const;
+    [[nodiscard]] std::vector<Action> get_elements() const;
 
-private:
-    const char *m_name;
+    [[nodiscard]] const Key &get_key() const;
+
+
+public:
+
+    std::string m_name;
     Key m_key;
-    std::vector<mts_action> m_elements;
+    std::vector<Action> m_elements;
     bool m_wheel_open = false;
     int m_hovered_id = -1;
 };
